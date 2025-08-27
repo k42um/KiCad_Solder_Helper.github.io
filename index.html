@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiCad はんだ付けアシスタント</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #board-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #board-svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">KiCad はんだ付けアシスタント</h1>
+            <p class="text-gray-600 mt-2">`.kicad_pcb` ファイルをアップロードして、はんだ付け作業を開始しましょう。</p>
+        </header>
+
+        <div id="upload-section" class="max-w-xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+            <h2 class="text-xl font-semibold mb-4">PCBファイルをアップロード</h2>
+            <input type="file" id="pcb-file-input" class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100" accept=".kicad_pcb">
+            <p id="file-error" class="text-red-500 text-sm mt-2 hidden"></p>
+        </div>
+
+        <main id="main-content" class="hidden mt-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- 左側: 基板ビュー -->
+                <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden min-h-[60vh]">
+                    <div id="board-container">
+                        <!-- 基板SVGがここに挿入されます -->
+                    </div>
+                </div>
+
+                <!-- 右側: 情報パネル -->
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold border-b pb-2 mb-4">部品情報</h2>
+                        <div id="component-info" class="space-y-3 text-lg">
+                            <p><strong>リファレンス:</strong> <span id="comp-ref" class="font-mono bg-gray-100 px-2 py-1 rounded">-</span></p>
+                            <p><strong>値:</strong> <span id="comp-val" class="font-mono bg-gray-100 px-2 py-1 rounded">-</span></p>
+                            <p><strong>フットプリント:</strong> <span id="comp-footprint" class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">-</span></p>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="text-xl font-bold border-b pb-2 mb-4">進捗</h3>
+                            <div class="flex justify-between items-center">
+                                <p id="progress-text" class="text-lg">0 / 0</p>
+                                <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">リセット</button>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+                                <div id="progress-bar" class="bg-indigo-600 h-4 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="controls" class="mt-8 space-y-3">
+                         <button id="btn-mounted" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
+                            ✔ つけた
+                        </button>
+                        <button id="btn-pre-mounted" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
+                            🔍 すでについていた
+                        </button>
+                        <button id="btn-skip" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
+                            ✖ 未実装のまま
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <section id="summary-section" class="hidden mt-8 bg-white rounded-lg shadow-md p-8">
+            <h2 class="text-3xl font-bold text-center mb-6">作業結果一覧</h2>
+            <div id="summary-list" class="max-h-[60vh] overflow-y-auto border rounded-lg p-4 space-y-2">
+                <!-- 結果がここに挿入されます -->
+            </div>
+            <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                <button id="download-btn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
+                    ログをダウンロード
+                </button>
+                <button id="restart-btn" class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
+                    最初からやり直す
+                </button>
+                <button id="new-file-btn" class="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
+                    新規ファイルをアップロード
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // DOM要素の取得
+        const fileInput = document.getElementById('pcb-file-input');
+        const uploadSection = document.getElementById('upload-section');
+        const mainContent = document.getElementById('main-content');
+        const summarySection = document.getElementById('summary-section');
+        const boardContainer = document.getElementById('board-container');
+        const compRef = document.getElementById('comp-ref');
+        const compVal = document.getElementById('comp-val');
+        const compFootprint = document.getElementById('comp-footprint');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const btnMounted = document.getElementById('btn-mounted');
+        const btnPreMounted = document.getElementById('btn-pre-mounted');
+        const btnSkip = document.getElementById('btn-skip');
+        const resetBtn = document.getElementById('reset-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const newFileBtn = document.getElementById('new-file-btn');
+        const summaryList = document.getElementById('summary-list');
+        const fileError = document.getElementById('file-error');
+
+        // アプリケーションの状態
+        let components = [];
+        let currentIndex = -1;
+        let boardData = null;
+        let boardDimensions = { minX: 0, minY: 0, width: 0, height: 0 };
+
+        // イベントリスナーの設定
+        fileInput.addEventListener('change', handleFileSelect);
+        btnMounted.addEventListener('click', () => moveToNextComponent('mounted'));
+        btnPreMounted.addEventListener('click', () => moveToNextComponent('pre-mounted'));
+        btnSkip.addEventListener('click', () => moveToNextComponent('skipped'));
+        resetBtn.addEventListener('click', startSolderProcess);
+        downloadBtn.addEventListener('click', downloadLog);
+        restartBtn.addEventListener('click', restartProcess);
+        newFileBtn.addEventListener('click', uploadNewFile);
+        
+        function handleFileSelect(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.kicad_pcb')) {
+                fileError.textContent = 'エラー: .kicad_pcb ファイルを選択してください。';
+                fileError.classList.remove('hidden');
+                return;
+            }
+            fileError.classList.add('hidden');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const fileContent = e.target.result;
+                    boardData = parseKicadPcb(fileContent);
+                    components = boardData.footprints
+                        .filter(fp => fp.reference && fp.reference.trim() && !fp.reference.startsWith('#'))
+                        .sort((a, b) => {
+                            const aIsSmd = a.attributes.includes('smd');
+                            const bIsSmd = b.attributes.includes('smd');
+                            if (aIsSmd && !bIsSmd) return -1;
+                            if (!aIsSmd && bIsSmd) return 1;
+                            return a.reference.localeCompare(b.reference, undefined, { numeric: true });
+                        });
+                    
+                    if (components.length === 0) {
+                        fileError.textContent = 'エラー: ファイルから部品を検出できませんでした。';
+                        fileError.classList.remove('hidden');
+                        return;
+                    }
+                    renderBoard(boardData);
+                    uploadSection.classList.add('hidden');
+                    summarySection.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    startSolderProcess();
+                } catch (error) {
+                    console.error("ファイルの処理中にエラーが発生しました:", error);
+                    fileError.textContent = `エラー: ファイルの解析に失敗しました。詳細: ${error.message}`;
+                    fileError.classList.remove('hidden');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseKicadPcb(pcbText) {
+            const footprints = [];
+            const edgeCuts = [];
+
+            const findClosingParen = (text, startIndex) => {
+                let openParenCount = 1;
+                for (let i = startIndex + 1; i < text.length; i++) {
+                    if (text[i] === '(') openParenCount++;
+                    else if (text[i] === ')') openParenCount--;
+                    if (openParenCount === 0) return i;
+                }
+                return -1;
+            };
+            
+            const getBlocks = (text, keyword) => {
+                const blocks = [];
+                let searchIndex = 0;
+                while ((searchIndex = text.indexOf(`(${keyword}`, searchIndex)) !== -1) {
+                    const closingParenIndex = findClosingParen(text, searchIndex);
+                    if (closingParenIndex !== -1) {
+                        blocks.push(text.substring(searchIndex, closingParenIndex + 1));
+                        searchIndex = closingParenIndex + 1;
+                    } else {
+                        searchIndex++;
+                    }
+                }
+                return blocks;
+            };
+
+            const footprintBlocks = getBlocks(pcbText, 'footprint');
+            for (const block of footprintBlocks) {
+                if (!block.includes('(at ')) continue;
+                const atMatch = block.match(/\(at ([-.\d]+) ([-.\d]+) ?([-.\d]+)?\)/);
+                if (!atMatch) continue;
+
+                const fpX = parseFloat(atMatch[1]);
+                const fpY = parseFloat(atMatch[2]);
+                const fpRot = atMatch[3] ? parseFloat(atMatch[3]) : 0;
+                const fpRad = -fpRot * (Math.PI / 180);
+
+                const fpLineBlocks = getBlocks(block, 'fp_line');
+                for (const lineBlock of fpLineBlocks) {
+                    if (lineBlock.includes('(layer "Edge.Cuts")')) {
+                        const startMatch = lineBlock.match(/\(start ([-.\d]+) ([-.\d]+)\)/);
+                        const endMatch = lineBlock.match(/\(end ([-.\d]+) ([-.\d]+)\)/);
+                        if (startMatch && endMatch) {
+                            const sx = parseFloat(startMatch[1]);
+                            const sy = parseFloat(startMatch[2]);
+                            const ex = parseFloat(endMatch[1]);
+                            const ey = parseFloat(endMatch[2]);
+
+                            const transformedStartX = fpX + (sx * Math.cos(fpRad) - sy * Math.sin(fpRad));
+                            const transformedStartY = fpY + (sx * Math.sin(fpRad) + sy * Math.cos(fpRad));
+                            const transformedEndX = fpX + (ex * Math.cos(fpRad) - ey * Math.sin(fpRad));
+                            const transformedEndY = fpY + (ex * Math.sin(fpRad) + ey * Math.cos(fpRad));
+                            
+                            edgeCuts.push({ startX: transformedStartX, startY: transformedStartY, endX: transformedEndX, endY: transformedEndY });
+                        }
+                    }
+                }
+                
+                const nameMatch = block.match(/\(footprint "([^"]+)"/);
+                const footprintName = nameMatch ? nameMatch[1] : '';
+                
+                let reference = null;
+                const propRefMatch = block.match(/\(property "Reference" "([^"]+)"/);
+                if (propRefMatch) reference = propRefMatch[1];
+                
+                let value = null;
+                const propValMatch = block.match(/\(property "Value" "([^"]+)"/);
+                if (propValMatch) value = propValMatch[1];
+
+                if (reference && !footprintName.toLowerCase().includes('mounthole') && !reference.toUpperCase().startsWith("REF**")) {
+                    const smdMatch = block.match(/\(attr smd\)/);
+                    const layerMatch = block.match(/\(layer "([^"]+)"\)/);
+                    const pads = [];
+                    const padBlocks = getBlocks(block, 'pad');
+                    for (const padBlock of padBlocks) {
+                        const padAtMatch = padBlock.match(/\(at ([-.\d]+) ([-.\d]+) ?([-.\d]+)?\)/);
+                        const padSizeMatch = padBlock.match(/\(size ([-.\d]+) ([-.\d]+)\)/);
+                        if (padAtMatch && padSizeMatch) {
+                            pads.push({
+                                x: parseFloat(padAtMatch[1]),
+                                y: parseFloat(padAtMatch[2]),
+                                rotation: padAtMatch[3] ? parseFloat(padAtMatch[3]) : 0,
+                                width: parseFloat(padSizeMatch[1]),
+                                height: parseFloat(padSizeMatch[2]),
+                            });
+                        }
+                    }
+
+                    footprints.push({
+                        name: footprintName,
+                        layer: layerMatch ? layerMatch[1] : 'F.Cu', x: fpX, y: fpY, rotation: fpRot,
+                        reference: reference, value: value || '', attributes: smdMatch ? ['smd'] : [], pads: pads
+                    });
+                }
+            }
+
+            const grLineBlocks = getBlocks(pcbText, 'gr_line');
+            for (const block of grLineBlocks) {
+                 if (block.includes('(layer "Edge.Cuts")')) {
+                    const startMatch = block.match(/\(start ([-.\d]+) ([-.\d]+)\)/);
+                    const endMatch = block.match(/\(end ([-.\d]+) ([-.\d]+)\)/);
+                    if (startMatch && endMatch) {
+                        edgeCuts.push({
+                            startX: parseFloat(startMatch[1]), startY: parseFloat(startMatch[2]),
+                            endX: parseFloat(endMatch[1]), endY: parseFloat(endMatch[2]),
+                        });
+                    }
+                }
+            }
+
+            return { footprints, edgeCuts };
+        }
+
+        function renderBoard(data) {
+            boardContainer.innerHTML = '';
+            const allPoints = data.edgeCuts.flatMap(line => [{x: line.startX, y: line.startY}, {x: line.endX, y: line.endY}]);
+            if (allPoints.length === 0) {
+                 data.footprints.forEach(fp => allPoints.push({x: fp.x, y: fp.y}));
+            }
+            if (allPoints.length === 0) {
+                boardDimensions = { minX: 0, minY: 0, width: 100, height: 100 };
+            } else {
+                const minX = Math.min(...allPoints.map(p => p.x));
+                const minY = Math.min(...allPoints.map(p => p.y));
+                const maxX = Math.max(...allPoints.map(p => p.x));
+                const maxY = Math.max(...allPoints.map(p => p.y));
+                const margin = Math.max((maxX - minX), (maxY - minY)) * 0.05;
+                boardDimensions.minX = minX - margin;
+                boardDimensions.minY = minY - margin;
+                boardDimensions.width = (maxX - minX) + (margin * 2);
+                boardDimensions.height = (maxY - minY) + (margin * 2);
+            }
+
+            const svg = createSvgElement('svg');
+            svg.setAttribute('id', 'board-svg');
+            svg.setAttribute('viewBox', `${boardDimensions.minX} ${boardDimensions.minY} ${boardDimensions.width} ${boardDimensions.height}`);
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+            const group = createSvgElement('g');
+            data.edgeCuts.forEach(line => {
+                const svgLine = createSvgElement('line');
+                svgLine.setAttribute('x1', line.startX);
+                svgLine.setAttribute('y1', line.startY);
+                svgLine.setAttribute('x2', line.endX);
+                svgLine.setAttribute('y2', line.endY);
+                svgLine.setAttribute('stroke', '#334155');
+                svgLine.setAttribute('stroke-width', 0.2);
+                group.appendChild(svgLine);
+            });
+            data.footprints.forEach(fp => {
+                const fpGroup = createSvgElement('g');
+                fpGroup.setAttribute('transform', `translate(${fp.x} ${fp.y}) rotate(${fp.rotation})`);
+                fp.pads.forEach(pad => {
+                    const padRect = createSvgElement('rect');
+                    padRect.setAttribute('x', pad.x - pad.width / 2);
+                    padRect.setAttribute('y', pad.y - pad.height / 2);
+                    padRect.setAttribute('width', pad.width);
+                    padRect.setAttribute('height', pad.height);
+                    padRect.setAttribute('fill', '#cbd5e1');
+                    if(pad.rotation) {
+                        padRect.setAttribute('transform', `rotate(${pad.rotation} ${pad.x} ${pad.y})`);
+                    }
+                    fpGroup.appendChild(padRect);
+                });
+                group.appendChild(fpGroup);
+            });
+
+            svg.appendChild(group);
+            boardContainer.appendChild(svg);
+        }
+
+        function createSvgElement(tagName) {
+            return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+        }
+
+        function getPadBoundingBox(pads) {
+            if (!pads || pads.length === 0) return { x: 0, y: 0, width: 1, height: 1 };
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            pads.forEach(pad => {
+                const halfW = pad.width / 2;
+                const halfH = pad.height / 2;
+                minX = Math.min(minX, pad.x - halfW);
+                maxX = Math.max(maxX, pad.x + halfW);
+                minY = Math.min(minY, pad.y - halfH);
+                maxY = Math.max(maxY, pad.y + halfH);
+            });
+            const padding = 0.2;
+            return {
+                x: minX - padding, y: minY - padding,
+                width: (maxX - minX) + (padding * 2), height: (maxY - minY) + (padding * 2)
+            };
+        }
+
+        function startSolderProcess() {
+            currentIndex = -1;
+            components.forEach(c => c.status = 'pending');
+            moveToNextComponent();
+        }
+
+        function moveToNextComponent(status) {
+            if (currentIndex >= 0 && currentIndex < components.length) {
+                components[currentIndex].status = status;
+            }
+            updateProgress();
+            const nextIndex = components.findIndex((c, i) => i > currentIndex && c.status === 'pending');
+            currentIndex = nextIndex;
+            
+            if (currentIndex === -1) {
+                showSummary();
+            } else {
+                updateComponentInfo();
+            }
+        }
+
+        function updateProgress() {
+            const processedCount = components.filter(c => c.status !== 'pending').length;
+            const totalCount = components.length;
+            progressText.textContent = `${processedCount} / ${totalCount}`;
+            progressBar.style.width = `${totalCount > 0 ? (processedCount / totalCount) * 100 : 0}%`;
+        }
+        
+        function updateComponentInfo() {
+            const existingHighlight = document.getElementById('highlight-group');
+            if (existingHighlight) existingHighlight.remove();
+
+            if (currentIndex === -1) {
+                compRef.textContent = '完了！';
+                compVal.textContent = 'お疲れ様でした';
+                compFootprint.textContent = '-';
+                btnMounted.disabled = true;
+                btnPreMounted.disabled = true;
+                btnSkip.disabled = true;
+            } else {
+                const component = components[currentIndex];
+                compRef.textContent = component.reference;
+                compVal.textContent = component.value;
+                compFootprint.textContent = component.name;
+                
+                const svg = document.getElementById('board-svg');
+                if (svg) {
+                    const bbox = getPadBoundingBox(component.pads);
+                    const highlightGroup = createSvgElement('g');
+                    highlightGroup.setAttribute('id', 'highlight-group');
+                    highlightGroup.setAttribute('transform', `translate(${component.x} ${component.y}) rotate(${component.rotation})`);
+
+                    const highlightRect = createSvgElement('rect');
+                    highlightRect.setAttribute('x', bbox.x);
+                    highlightRect.setAttribute('y', bbox.y);
+                    highlightRect.setAttribute('width', bbox.width);
+                    highlightRect.setAttribute('height', bbox.height);
+                    highlightRect.setAttribute('fill', 'rgba(239, 68, 68, 0.4)');
+                    highlightRect.setAttribute('stroke', 'rgba(191, 25, 25, 0.8)');
+                    highlightRect.setAttribute('stroke-width', 0.15);
+                    highlightRect.setAttribute('rx', 0.2);
+
+                    highlightGroup.appendChild(highlightRect);
+                    svg.appendChild(highlightGroup);
+                }
+                btnMounted.disabled = false;
+                btnPreMounted.disabled = false;
+                btnSkip.disabled = false;
+            }
+        }
+        
+        function showSummary() {
+            mainContent.classList.add('hidden');
+            summarySection.classList.remove('hidden');
+            summaryList.innerHTML = '';
+
+            const statusMap = {
+                mounted: { text: 'つけた', color: 'bg-green-100 text-green-800' },
+                'pre-mounted': { text: 'すでについていた', color: 'bg-blue-100 text-blue-800' },
+                skipped: { text: '未実装のまま', color: 'bg-gray-100 text-gray-800' },
+            };
+
+            components.forEach(c => {
+                const statusInfo = statusMap[c.status] || { text: '不明', color: 'bg-red-100 text-red-800' };
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-3 gap-4 p-2 rounded';
+                row.innerHTML = `
+                    <span class="font-mono">${c.reference}</span>
+                    <span class="font-mono truncate">${c.value}</span>
+                    <span class="font-semibold px-2 py-1 text-sm rounded-full text-center ${statusInfo.color}">${statusInfo.text}</span>
+                `;
+                summaryList.appendChild(row);
+            });
+        }
+
+        function downloadLog() {
+            let logContent = "Reference,Value,Status\n";
+            const statusText = {
+                mounted: 'つけた',
+                'pre-mounted': 'すでについていた',
+                skipped: '未実装のまま',
+            };
+            components.forEach(c => {
+                logContent += `${c.reference},"${c.value}",${statusText[c.status] || '不明'}\n`;
+            });
+
+            const blob = new Blob([logContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'solder-log.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function restartProcess() {
+            summarySection.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            startSolderProcess();
+        }
+        
+        function uploadNewFile() {
+            summarySection.classList.add('hidden');
+            mainContent.classList.add('hidden');
+            uploadSection.classList.remove('hidden');
+            fileInput.value = '';
+            boardContainer.innerHTML = '';
+        }
+
+        function startSolderProcess() {
+            currentIndex = -1;
+            components.forEach(c => c.status = 'pending');
+            moveToNextComponent(); // Initial call to show the first component
+        }
+    </script>
+</body>
+</html>

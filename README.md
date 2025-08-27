@@ -22,3 +22,7 @@ KiCadで作成した基板の半田付けを補助するソフトウェアを管
 
 ## 提案等
 提案や修正は歓迎します。ぜひissueやPRを送信してください。
+
+## GitHub Pages
+GitHub Pagesで本サイトを公開しました。準備の項を飛ばして使用できるので、おすすめです！
+https://k42um.github.io/KiCad_Solder_Helper.github.io/

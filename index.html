@@ -36,7 +36,7 @@
 <body class="bg-gray-100 text-gray-800">
 
     <div class="container mx-auto p-4 md:p-8">
-        <header class="text-center mb-8">
+        <header id="app-header" class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900">KiCad はんだ付けアシスタント</h1>
             <p class="text-gray-600 mt-2">`.kicad_pcb` ファイルをアップロードして、はんだ付け作業を開始しましょう。</p>
         </header>
@@ -52,56 +52,54 @@
             <p id="file-error" class="text-red-500 text-sm mt-2 hidden"></p>
         </div>
 
-        <main id="main-content" class="hidden mt-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <main id="main-content" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="height: calc(100vh - 4rem);">
                 <!-- 左側: 基板ビュー -->
-                <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden min-h-[60vh]">
+                <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden">
                     <div id="board-container">
                         <!-- 基板SVGがここに挿入されます -->
                     </div>
                 </div>
 
                 <!-- 右側: 情報パネル -->
-                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-between">
-                    <div>
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+                    <div class="flex-grow">
                         <h2 class="text-2xl font-bold border-b pb-2 mb-4">現在の部品</h2>
                         <div id="component-info" class="space-y-3 text-lg">
                             <p><strong>リファレンス:</strong> <span id="comp-ref" class="font-mono bg-gray-100 px-2 py-1 rounded">-</span></p>
                             <p><strong>値:</strong> <span id="comp-val" class="font-mono bg-gray-100 px-2 py-1 rounded">-</span></p>
-                            <p><strong>フットプリント:</strong> <span id="comp-footprint" class="font-mono bg-gray-100 px-2 py-1 rounded text-sm">-</span></p>
+                            <div>
+                                <p><strong>フットプリント:</strong></p>
+                                <span id="comp-footprint" class="font-mono bg-gray-100 px-2 py-1 rounded text-sm block truncate">-</span>
+                            </div>
                         </div>
                         <div class="mt-6">
                             <h3 class="text-xl font-bold border-b pb-2 mb-4">進捗</h3>
-                            <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center mb-2">
                                 <p id="progress-text" class="text-lg">0 / 0</p>
                                 <div class="flex gap-2 flex-wrap justify-end">
-                                    <button id="end-process-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">終了</button>
-                                    <button id="back-to-upload-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">トップへ戻る</button>
-                                    <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">リセット</button>
+                                    <button id="end-process-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-lg transition-colors text-xs">終了</button>
+                                    <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-3 rounded-lg transition-colors text-xs">リセット</button>
                                 </div>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+                            <div class="w-full bg-gray-200 rounded-full h-4">
                                 <div id="progress-bar" class="bg-indigo-600 h-4 rounded-full" style="width: 0%"></div>
                             </div>
                         </div>
                          <div class="mt-6">
                             <h3 class="text-xl font-bold border-b pb-2 mb-4">次の部品リスト</h3>
-                            <ul id="upcoming-list" class="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                            <ul id="upcoming-list" class="h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
                                 <!-- 次の部品リストがここに挿入されます -->
                             </ul>
                         </div>
                     </div>
 
-                    <div id="controls" class="mt-8 space-y-3">
-                         <button id="btn-mounted" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
-                            ✔ つけた
-                        </button>
-                        <button id="btn-pre-mounted" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
-                            🔍 すでについていた
-                        </button>
-                        <button id="btn-skip" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-sm">
-                            ✖ 未実装のまま
-                        </button>
+                    <div id="controls" class="mt-auto pt-6">
+                         <div class="grid grid-cols-3 gap-3">
+                            <button id="btn-mounted" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">✔ つけた</button>
+                            <button id="btn-pre-mounted" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">🔍 既存</button>
+                            <button id="btn-skip" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">✖ 未実装</button>
+                         </div>
                     </div>
                 </div>
             </div>
@@ -116,9 +114,6 @@
                 <button id="download-btn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
                     ログをダウンロード
                 </button>
-                <button id="restart-btn" class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
-                    最初からやり直す
-                </button>
                 <button id="new-file-btn" class="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
                     新規ファイルをアップロード
                 </button>
@@ -127,8 +122,21 @@
 
     </div>
 
+    <!-- 確認モーダル -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 class="text-xl font-bold mb-4">作業を終了しますか？</h3>
+            <p class="text-gray-600 mb-6">現在の進捗は失われます。よろしいですか？</p>
+            <div class="flex justify-end gap-4">
+                <button id="confirm-no-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">いいえ</button>
+                <button id="confirm-yes-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">はい、終了します</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // DOM要素の取得
+        const appHeader = document.getElementById('app-header');
         const fileInput = document.getElementById('pcb-file-input');
         const uploadSection = document.getElementById('upload-section');
         const mainContent = document.getElementById('main-content');
@@ -143,14 +151,15 @@
         const btnPreMounted = document.getElementById('btn-pre-mounted');
         const btnSkip = document.getElementById('btn-skip');
         const resetBtn = document.getElementById('reset-btn');
-        const backToUploadBtn = document.getElementById('back-to-upload-btn');
         const endProcessBtn = document.getElementById('end-process-btn');
         const downloadBtn = document.getElementById('download-btn');
-        const restartBtn = document.getElementById('restart-btn');
         const newFileBtn = document.getElementById('new-file-btn');
         const summaryList = document.getElementById('summary-list');
         const upcomingList = document.getElementById('upcoming-list');
         const fileError = document.getElementById('file-error');
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmYesBtn = document.getElementById('confirm-yes-btn');
+        const confirmNoBtn = document.getElementById('confirm-no-btn');
 
         // アプリケーションの状態
         let components = [];
@@ -165,10 +174,13 @@
         btnPreMounted.addEventListener('click', () => moveToNextComponent('pre-mounted'));
         btnSkip.addEventListener('click', () => moveToNextComponent('skipped'));
         resetBtn.addEventListener('click', startSolderProcess);
-        backToUploadBtn.addEventListener('click', returnToUploadScreen);
-        endProcessBtn.addEventListener('click', endProcess);
+        endProcessBtn.addEventListener('click', () => confirmationModal.classList.remove('hidden'));
+        confirmYesBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('hidden');
+            returnToUploadScreen();
+        });
+        confirmNoBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
         downloadBtn.addEventListener('click', downloadLog);
-        restartBtn.addEventListener('click', restartProcess);
         newFileBtn.addEventListener('click', returnToUploadScreen);
         
         function handleFileSelect(evt) {
@@ -201,6 +213,7 @@
                         return;
                     }
                     renderBoard(boardData);
+                    appHeader.classList.add('hidden');
                     uploadSection.classList.add('hidden');
                     summarySection.classList.add('hidden');
                     mainContent.classList.remove('hidden');
@@ -563,7 +576,7 @@
 
             const statusMap = {
                 mounted: { text: 'つけた', color: 'bg-green-100 text-green-800' },
-                'pre-mounted': { text: 'すでについていた', color: 'bg-blue-100 text-blue-800' },
+                'pre-mounted': { text: '既存', color: 'bg-blue-100 text-blue-800' },
                 skipped: { text: '未実装のまま', color: 'bg-gray-100 text-gray-800' },
             };
 
@@ -584,7 +597,7 @@
             let logContent = "Reference,Value,Status\n";
             const statusText = {
                 mounted: 'つけた',
-                'pre-mounted': 'すでについていた',
+                'pre-mounted': '既存',
                 skipped: '未実装のまま',
             };
             components.forEach(c => {
@@ -612,6 +625,7 @@
             summarySection.classList.add('hidden');
             mainContent.classList.add('hidden');
             uploadSection.classList.remove('hidden');
+            appHeader.classList.remove('hidden');
             fileInput.value = '';
             boardContainer.innerHTML = '';
         }

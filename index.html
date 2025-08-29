@@ -74,7 +74,8 @@
                             <h3 class="text-xl font-bold border-b pb-2 mb-4">進捗</h3>
                             <div class="flex justify-between items-center">
                                 <p id="progress-text" class="text-lg">0 / 0</p>
-                                <div class="flex gap-2">
+                                <div class="flex gap-2 flex-wrap justify-end">
+                                    <button id="end-process-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">終了</button>
                                     <button id="back-to-upload-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">トップへ戻る</button>
                                     <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">リセット</button>
                                 </div>
@@ -143,6 +144,7 @@
         const btnSkip = document.getElementById('btn-skip');
         const resetBtn = document.getElementById('reset-btn');
         const backToUploadBtn = document.getElementById('back-to-upload-btn');
+        const endProcessBtn = document.getElementById('end-process-btn');
         const downloadBtn = document.getElementById('download-btn');
         const restartBtn = document.getElementById('restart-btn');
         const newFileBtn = document.getElementById('new-file-btn');
@@ -164,6 +166,7 @@
         btnSkip.addEventListener('click', () => moveToNextComponent('skipped'));
         resetBtn.addEventListener('click', startSolderProcess);
         backToUploadBtn.addEventListener('click', returnToUploadScreen);
+        endProcessBtn.addEventListener('click', endProcess);
         downloadBtn.addEventListener('click', downloadLog);
         restartBtn.addEventListener('click', restartProcess);
         newFileBtn.addEventListener('click', returnToUploadScreen);
@@ -540,7 +543,6 @@
                 components.splice(newTargetIndex, 0, draggedItem);
             }
             
-            // 現在のcurrentIndexが指すコンポーネントが変わらないように再設定
             const currentComponentRef = components[currentIndex]?.reference;
             if (currentComponentRef) {
                 currentIndex = components.findIndex(c => c.reference === currentComponentRef);
@@ -618,6 +620,17 @@
             currentIndex = -1;
             components.forEach(c => c.status = 'pending');
             moveToNextComponent();
+        }
+
+        function endProcess() {
+            components.forEach((c) => {
+                if (c.status === 'pending') {
+                    c.status = 'skipped';
+                }
+            });
+            currentIndex = -1;
+            updateProgress();
+            showSummary();
         }
     </script>
 </body>

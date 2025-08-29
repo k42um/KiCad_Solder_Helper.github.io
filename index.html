@@ -65,7 +65,10 @@
                             <h3 class="text-xl font-bold border-b pb-2 mb-4">進捗</h3>
                             <div class="flex justify-between items-center">
                                 <p id="progress-text" class="text-lg">0 / 0</p>
-                                <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">リセット</button>
+                                <div class="flex gap-2">
+                                    <button id="back-to-upload-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">トップへ戻る</button>
+                                    <button id="reset-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors text-sm">リセット</button>
+                                </div>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
                                 <div id="progress-bar" class="bg-indigo-600 h-4 rounded-full" style="width: 0%"></div>
@@ -124,6 +127,7 @@
         const btnPreMounted = document.getElementById('btn-pre-mounted');
         const btnSkip = document.getElementById('btn-skip');
         const resetBtn = document.getElementById('reset-btn');
+        const backToUploadBtn = document.getElementById('back-to-upload-btn');
         const downloadBtn = document.getElementById('download-btn');
         const restartBtn = document.getElementById('restart-btn');
         const newFileBtn = document.getElementById('new-file-btn');
@@ -142,9 +146,10 @@
         btnPreMounted.addEventListener('click', () => moveToNextComponent('pre-mounted'));
         btnSkip.addEventListener('click', () => moveToNextComponent('skipped'));
         resetBtn.addEventListener('click', startSolderProcess);
+        backToUploadBtn.addEventListener('click', returnToUploadScreen);
         downloadBtn.addEventListener('click', downloadLog);
         restartBtn.addEventListener('click', restartProcess);
-        newFileBtn.addEventListener('click', uploadNewFile);
+        newFileBtn.addEventListener('click', returnToUploadScreen);
         
         function handleFileSelect(evt) {
             const file = evt.target.files[0];
@@ -400,6 +405,8 @@
             currentIndex = nextIndex;
             
             if (currentIndex === -1) {
+                // すべての部品が処理されたら、進捗を100%にしてからサマリーを表示
+                updateProgress(); 
                 showSummary();
             } else {
                 updateComponentInfo();
@@ -508,7 +515,7 @@
             startSolderProcess();
         }
         
-        function uploadNewFile() {
+        function returnToUploadScreen() {
             summarySection.classList.add('hidden');
             mainContent.classList.add('hidden');
             uploadSection.classList.remove('hidden');

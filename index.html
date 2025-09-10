@@ -53,16 +53,16 @@
         </div>
 
         <main id="main-content" class="hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="height: calc(100vh - 4rem);">
+            <div class="grid grid-cols-1 lg:grid-cols-7 gap-8" style="height: calc(100vh - 4rem);">
                 <!-- 左側: 基板ビュー -->
-                <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden">
+                <div class="lg:col-span-4 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden">
                     <div id="board-container">
                         <!-- 基板SVGがここに挿入されます -->
                     </div>
                 </div>
 
                 <!-- 右側: 情報パネル -->
-                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col lg:col-span-3">
                     <div class="flex-grow">
                         <h2 class="text-2xl font-bold border-b pb-2 mb-4">現在の部品</h2>
                         <div id="component-info" class="space-y-3 text-lg">
@@ -96,9 +96,9 @@
 
                     <div id="controls" class="mt-auto pt-6">
                          <div class="grid grid-cols-3 gap-3">
-                            <button id="btn-mounted" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">✔ つけた</button>
-                            <button id="btn-pre-mounted" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">🔍 既存</button>
-                            <button id="btn-skip" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-2 rounded-lg text-base transition-colors shadow-sm">✖ 未実装</button>
+                            <button id="btn-mounted" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-2 rounded-lg text-sm transition-colors shadow-sm">✔ つけた (←)</button>
+                            <button id="btn-pre-mounted" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-lg text-sm transition-colors shadow-sm">🔍 既存 (↓)</button>
+                            <button id="btn-skip" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-2 rounded-lg text-sm transition-colors shadow-sm">✖ 未実装 (→)</button>
                          </div>
                     </div>
                 </div>
@@ -182,6 +182,29 @@
         confirmNoBtn.addEventListener('click', () => confirmationModal.classList.add('hidden'));
         downloadBtn.addEventListener('click', downloadLog);
         newFileBtn.addEventListener('click', returnToUploadScreen);
+        document.addEventListener('keydown', handleKeyPress);
+
+        function handleKeyPress(e) {
+            // 作業中のみキー操作を有効にする
+            if (mainContent.classList.contains('hidden') || currentIndex === -1) {
+                return;
+            }
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    moveToNextComponent('mounted');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    moveToNextComponent('pre-mounted');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    moveToNextComponent('skipped');
+                    break;
+            }
+        }
         
         function handleFileSelect(evt) {
             const file = evt.target.files[0];
@@ -649,3 +672,5 @@
     </script>
 </body>
 </html>
+
+

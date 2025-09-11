@@ -22,12 +22,10 @@
             max-width: 100%;
             max-height: 100%;
         }
-        /* ドラッグ中の要素のスタイル */
         .dragging {
             opacity: 0.5;
             background: #eef2ff; /* indigo-50 */
         }
-        /* ドロップ先のインジケータ */
         .drag-over {
             border-top: 2px solid #4f46e5; /* indigo-600 */
         }
@@ -54,14 +52,11 @@
 
         <main id="main-content" class="hidden">
             <div class="grid grid-cols-1 lg:grid-cols-7 gap-8" style="height: calc(100vh - 4rem);">
-                <!-- 左側: 基板ビュー -->
                 <div class="lg:col-span-4 bg-white rounded-lg shadow-md p-4 flex justify-center items-center overflow-hidden">
                     <div id="board-container">
-                        <!-- 基板SVGがここに挿入されます -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- 右側: 情報パネル -->
                 <div class="bg-white rounded-lg shadow-md p-6 flex flex-col lg:col-span-3">
                     <div class="flex-grow">
                         <h2 class="text-2xl font-bold border-b pb-2 mb-4">現在の部品</h2>
@@ -89,8 +84,7 @@
                          <div class="mt-6">
                             <h3 class="text-xl font-bold border-b pb-2 mb-4">次の部品リスト</h3>
                             <ul id="upcoming-list" class="h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
-                                <!-- 次の部品リストがここに挿入されます -->
-                            </ul>
+                                </ul>
                         </div>
                     </div>
 
@@ -108,8 +102,7 @@
         <section id="summary-section" class="hidden mt-8 bg-white rounded-lg shadow-md p-8">
             <h2 class="text-3xl font-bold text-center mb-6">作業結果一覧</h2>
             <div id="summary-list" class="max-h-[60vh] overflow-y-auto border rounded-lg p-4 space-y-2">
-                <!-- 結果がここに挿入されます -->
-            </div>
+                </div>
             <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
                 <button id="download-btn" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-sm">
                     ログをダウンロード
@@ -122,7 +115,6 @@
 
     </div>
 
-    <!-- 確認モーダル -->
     <div id="confirmation-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <h3 class="text-xl font-bold mb-4">作業を終了しますか？</h3>
@@ -133,6 +125,16 @@
             </div>
         </div>
     </div>
+
+    <button id="toggle-speech-btn" class="fixed top-6 right-6 z-20 w-14 h-14 bg-white/80 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-white hover:shadow-xl transition-all duration-300 ease-in-out">
+        <svg id="speech-on-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+        </svg>
+        <svg id="speech-off-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7 hidden">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+        </svg>
+    </button>
+
 
     <script>
         // DOM要素の取得
@@ -160,6 +162,9 @@
         const confirmationModal = document.getElementById('confirmation-modal');
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
+        const toggleSpeechBtn = document.getElementById('toggle-speech-btn');
+        const speechOnIcon = document.getElementById('speech-on-icon');
+        const speechOffIcon = document.getElementById('speech-off-icon');
 
         // アプリケーションの状態
         let components = [];
@@ -167,6 +172,7 @@
         let boardData = null;
         let boardDimensions = { minX: 0, minY: 0, width: 0, height: 0 };
         let draggedComponentRef = null;
+        let isSpeechEnabled = true;
 
         // イベントリスナーの設定
         fileInput.addEventListener('change', handleFileSelect);
@@ -183,26 +189,63 @@
         downloadBtn.addEventListener('click', downloadLog);
         newFileBtn.addEventListener('click', returnToUploadScreen);
         document.addEventListener('keydown', handleKeyPress);
+        toggleSpeechBtn.addEventListener('click', toggleSpeech);
+
+        function formatValueForSpeech(value) {
+            if (!value) return '';
+            let spokenValue = value;
+            
+            spokenValue = spokenValue.replace(/(\d+)R(\d+)/gi, '$1.$2 オーム');
+
+            const replacements = {
+                'n': 'ナノ', 'u': 'マイクロ', 'µ': 'マイクロ', 'p': 'ピコ',
+                'k': 'キロ', 'M': 'メガ', 'G': 'ギガ',
+                'F': 'ファラッド', 'H': 'ヘンリー',
+                'R': 'オーム', 'Ω': 'オーム'
+            };
+
+            for (const [key, replacement] of Object.entries(replacements)) {
+                const regex = new RegExp(key, 'gi');
+                spokenValue = spokenValue.replace(regex, ` ${replacement} `);
+            }
+            
+            return spokenValue.trim().replace(/\s+/g, ' ');
+        }
+
+        function speakComponent(reference, value) {
+            if (!isSpeechEnabled || !('speechSynthesis' in window)) {
+                return;
+            }
+            window.speechSynthesis.cancel();
+            
+            const spokenValue = formatValueForSpeech(value);
+            const textToSpeak = `${reference}, ${spokenValue}`;
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'ja-JP';
+            utterance.rate = 1.1;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleSpeech() {
+            isSpeechEnabled = !isSpeechEnabled;
+            if (isSpeechEnabled) {
+                speechOnIcon.classList.remove('hidden');
+                speechOffIcon.classList.add('hidden');
+            } else {
+                speechOnIcon.classList.add('hidden');
+                speechOffIcon.classList.remove('hidden');
+                window.speechSynthesis.cancel();
+            }
+        }
 
         function handleKeyPress(e) {
-            // 作業中のみキー操作を有効にする
             if (mainContent.classList.contains('hidden') || currentIndex === -1) {
                 return;
             }
-
             switch (e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    moveToNextComponent('mounted');
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    moveToNextComponent('pre-mounted');
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    moveToNextComponent('skipped');
-                    break;
+                case 'ArrowLeft': e.preventDefault(); moveToNextComponent('mounted'); break;
+                case 'ArrowDown': e.preventDefault(); moveToNextComponent('pre-mounted'); break;
+                case 'ArrowRight': e.preventDefault(); moveToNextComponent('skipped'); break;
             }
         }
         
@@ -240,6 +283,7 @@
                     uploadSection.classList.add('hidden');
                     summarySection.classList.add('hidden');
                     mainContent.classList.remove('hidden');
+                    toggleSpeechBtn.classList.remove('hidden');
                     startSolderProcess();
                 } catch (error) {
                     console.error("ファイルの処理中にエラーが発生しました:", error);
@@ -493,6 +537,8 @@
                 compVal.textContent = component.value;
                 compFootprint.textContent = component.name;
                 
+                speakComponent(component.reference, component.value);
+                
                 const svg = document.getElementById('board-svg');
                 if (svg) {
                     const bbox = getPadBoundingBox(component.pads);
@@ -595,6 +641,9 @@
         function showSummary() {
             mainContent.classList.add('hidden');
             summarySection.classList.remove('hidden');
+            toggleSpeechBtn.classList.add('hidden');
+            speakComponent('作業完了', 'お疲れ様でした');
+
             summaryList.innerHTML = '';
 
             const statusMap = {
@@ -618,11 +667,7 @@
 
         function downloadLog() {
             let logContent = "Reference,Value,Status\n";
-            const statusText = {
-                mounted: 'つけた',
-                'pre-mounted': '既存',
-                skipped: '未実装のまま',
-            };
+            const statusText = { mounted: 'つけた', 'pre-mounted': '既存', skipped: '未実装のまま' };
             components.forEach(c => {
                 logContent += `${c.reference},"${c.value}",${statusText[c.status] || '不明'}\n`;
             });
@@ -637,18 +682,16 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
-
-        function restartProcess() {
-            summarySection.classList.add('hidden');
-            mainContent.classList.remove('hidden');
-            startSolderProcess();
-        }
         
         function returnToUploadScreen() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
             summarySection.classList.add('hidden');
             mainContent.classList.add('hidden');
             uploadSection.classList.remove('hidden');
             appHeader.classList.remove('hidden');
+            toggleSpeechBtn.classList.add('hidden');
             fileInput.value = '';
             boardContainer.innerHTML = '';
         }
@@ -658,19 +701,11 @@
             components.forEach(c => c.status = 'pending');
             moveToNextComponent();
         }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleSpeechBtn.classList.add('hidden');
+        });
 
-        function endProcess() {
-            components.forEach((c) => {
-                if (c.status === 'pending') {
-                    c.status = 'skipped';
-                }
-            });
-            currentIndex = -1;
-            updateProgress();
-            showSummary();
-        }
     </script>
 </body>
 </html>
-
-
